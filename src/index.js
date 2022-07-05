@@ -1,11 +1,20 @@
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
+const notifyOptions = {
+    timeout: 5000,
+}
+
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
-import axios from 'axios';
+const lightbox = new SimpleLightbox('.gallery a', { captionsData: 'alt', captionDelay: '250' });
 
-const API_KEY = '28406971-da9ac527785fed0c52df2227a';
-const BASE_URL = 'https://pixabay.com/api/';
-axios.defaults.baseURL = BASE_URL;
+const fetchOptions = {
+    searsearchTxt: "",
+    pgCurrent: 1,
+    cardsPerPg: 40,
+};
+
+import { fetchImages } from './js/fetchImages';
+import { drawGalleryToDOM } from './js/drawGalleryToDOM';
 
 const refs = {
     form: document.querySelector('#search-form'),
@@ -14,28 +23,18 @@ const refs = {
     gallery: document.querySelector('.gallery'),
 };
 
-const cardsPerPg = 40;
-let pgCurrent = 1;
 let totalCards = 0;
-let searchTxt = "";
-
-const notifyOptions = {
-    timeout: 5000,
-}
-const lightbox = new SimpleLightbox('.gallery a', { captionsData: 'alt', captionDelay: '250' });
 
 const observerOptions = {
-    // root: document.querySelector('#scrollArea'),
     rootMargin: '350px',
     threshold: 1.0
 };
-
 const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            console.log('!!! INTERSECTING !!!');
+            // console.log('!!! INTERSECTING !!!');
             
-            if (pgCurrent * cardsPerPg >= totalCards) {
+            if (fetchOptions.pgCurrent * fetchOptions.cardsPerPg >= totalCards) {
                 Notify.warning("We're sorry, but you've reached the END of search results.", notifyOptions);
                 return;
             }
@@ -52,8 +51,8 @@ async function onFormSubmit(e) {
     try {
         e.preventDefault();
 
-        searchTxt = e.target.elements.searchQuery.value;
-        if (!searchTxt) {
+        fetchOptions.searchTxt = e.target.elements.searchQuery.value;
+        if (!fetchOptions.searchTxt) {
             Notify.failure('Sorry, there are EMPTY your search query. Please try again.', notifyOptions);
             return;
         }
@@ -61,14 +60,29 @@ async function onFormSubmit(e) {
         // очистка начальных значений
         resetStartedValues();
 
-        // !!! подумать над очисткой формы !!!
-
-        const fetchData = await fetchImages();
+        const fetchData = await fetchImages(fetchOptions);
         await drawGallery(fetchData);
     } catch (err) {
-        console.error(err);
+        Notify.failure(err, notifyOptions);
     }
 };
+
+function resetStartedValues() {
+    refs.gallery.innerHTML = '';
+    fetchOptions.pgCurrent = 1;
+    setObserveOff();
+}
+
+async function onLoadMoreImages() {
+    try {
+        fetchOptions.pgCurrent += 1;
+
+        const fetchData = await fetchImages(fetchOptions);
+        await drawGallery(fetchData);
+    } catch (err) {
+        Notify.failure(err, notifyOptions);
+    };
+}
 
 function setObserveOn() {
     // document.querySelector('#scroll-check').classList.add('scroll-check');
@@ -79,49 +93,6 @@ function setObserveOff() {
     observer.unobserve(document.querySelector('.scroll-check'));
     // document.querySelector('#scroll-check').classList.remove('scroll-check');
 };
-
-function resetStartedValues() {
-    refs.loadMoreBtn.classList.add('is-hidden');
-    refs.gallery.innerHTML = '';
-    pgCurrent = 1;
-    setObserveOff();
-}
-
-async function onLoadMoreImages() {
-    try {
-        pgCurrent += 1;
-
-        const fetchData = await fetchImages();
-        await drawGallery(fetchData);
-    } catch (err) {
-        console.error(err);
-    };
-}
-
-async function fetchImages() {
-    try {
-        console.log('searchTxt: ', searchTxt);
-        console.log('pgCurrent: ', pgCurrent);
-
-        const config = {
-            params: {
-                key: API_KEY,
-                q: searchTxt,
-                image_type: 'photo',
-                orientation: 'horizontal',
-                safesearch: true,
-                page: pgCurrent,
-                per_page: cardsPerPg,
-            },
-        };
-
-        const resp = await axios.get('', config);
-        // console.log('resp: ', resp);
-        return resp.data;
-    } catch (err) {
-        Notify.failure(err);
-    };
-}
 
 function drawGallery(data) {
     const cards = data.hits;
@@ -134,39 +105,13 @@ function drawGallery(data) {
         return;
     };
 
-    if (pgCurrent === 1) Notify.success(`Hooray! We found ${totalCards} images.`, notifyOptions);
+    if (fetchOptions.pgCurrent === 1) {
+        Notify.success(`Hooray! We found ${totalCards} images.`, notifyOptions);
+    };
 
-    refs.gallery.insertAdjacentHTML('beforeend', createGalleryMarkup(cards));
+    drawGalleryToDOM(refs.gallery, cards);
 
     lightbox.refresh();
 
     setObserveOn();
 };
-
-function createGalleryMarkup(cards) {
-    return cards.map(createCardMarkup).join('');
-}
-
-function createCardMarkup({webformatURL,largeImageURL,tags,likes,views,comments,downloads}) {
-    return `
-        <div class="photo-card">
-            <a class="gallery-link" href="${largeImageURL}">
-                <img class="gallery-img" src="${webformatURL}" alt="${tags}" loading="lazy" />
-            </a>
-            <div class="info">
-                <p class="info-item">
-                    <b>Likes</b>${likes}
-                </p>
-                <p class="info-item">
-                    <b>Views</b>${views}
-                </p>
-                <p class="info-item">
-                    <b>Comments</b>${comments}
-                </p>
-                <p class="info-item">
-                    <b>Downloads</b>${downloads}
-                </p>
-            </div>
-        </div>
-        `;
-}
