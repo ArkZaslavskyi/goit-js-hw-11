@@ -40,18 +40,13 @@ const observer = new IntersectionObserver(entries => {
                 return;
             }
 
-            // 1. HTTP-запрос
-            // 2. Добавить разметку
             onLoadMoreImages();
-
         };
     });
 }, observerOptions);
 
 refs.form.addEventListener('submit', onFormSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMoreImages);
-
-// axiosImages();
 
 async function onFormSubmit(e) {
     try {
@@ -94,8 +89,6 @@ async function onLoadMoreImages() {
 
         const fetchData = await fetchImages();
         await drawGallery(fetchData);
-
-        // observer.observe(document.querySelector('.scroll-check'));
     } catch (err) {
         console.error(err);
     };
@@ -119,7 +112,7 @@ async function fetchImages() {
         };
 
         const resp = await axios.get('', config);
-        console.log('resp: ', resp);
+        // console.log('resp: ', resp);
         return resp.data;
     } catch (err) {
         Notify.failure(err);
@@ -127,7 +120,6 @@ async function fetchImages() {
 }
 
 function drawGallery(data) {
-    // { hits: cards, totalHits: totalCards }
     const cards = data.hits;
     totalCards = data.totalHits;
 
@@ -145,20 +137,6 @@ function drawGallery(data) {
     lightbox.refresh();
 
     setObserveOn();
-
-    // показать кнопку
-    // loadMoreBtnToggle(totalCards);
-
-    // observer.observe(document.querySelector('.scroll-check'));
-};
-
-function loadMoreBtnToggle(totalCards) {
-    if (pgCurrent === 1) refs.loadMoreBtn.classList.remove('is-hidden');
-
-    if (pgCurrent * cardsPerPg >= totalCards) {
-        refs.loadMoreBtn.classList.add('is-hidden');
-        Notify.warning("We're sorry, but you've reached the END of search results.", notifyOptions);
-    }
 };
 
 function createGalleryMarkup(cards) {
