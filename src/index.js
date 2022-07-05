@@ -53,6 +53,10 @@ async function onFormSubmit(e) {
         e.preventDefault();
 
         searchTxt = e.target.elements.searchQuery.value;
+        if (!searchTxt) {
+            Notify.failure('Sorry, there are EMPTY your search query. Please try again.', notifyOptions);
+            return;
+        }
 
         // очистка начальных значений
         resetStartedValues();
