@@ -8,7 +8,7 @@ import "simplelightbox/dist/simple-lightbox.min.css";
 const lightbox = new SimpleLightbox('.gallery a', { captionsData: 'alt', captionDelay: '250' });
 
 const fetchOptions = {
-    searsearchTxt: "",
+    searchTxt: '',
     pgCurrent: 1,
     cardsPerPg: 40,
 };
@@ -61,8 +61,11 @@ async function onFormSubmit(e) {
         resetStartedValues();
 
         const fetchData = await fetchImages(fetchOptions);
-        await drawGallery(fetchData);
+        await drawGallery(fetchData.data);
+        
+        await setTimeout(setObserveOn, 500);
     } catch (err) {
+        console.log('onFormSubmit - catch');
         Notify.failure(err, notifyOptions);
     }
 };
@@ -74,11 +77,13 @@ function resetStartedValues() {
 }
 
 async function onLoadMoreImages() {
+    console.log('onLoadMoreImages started...');
+
     try {
         fetchOptions.pgCurrent += 1;
 
         const fetchData = await fetchImages(fetchOptions);
-        await drawGallery(fetchData);
+        await drawGallery(fetchData.data);
     } catch (err) {
         Notify.failure(err, notifyOptions);
     };
@@ -112,6 +117,4 @@ function drawGallery(data) {
     drawGalleryToDOM(refs.gallery, cards);
 
     lightbox.refresh();
-
-    setObserveOn();
 };
