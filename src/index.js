@@ -51,6 +51,7 @@ async function onFormSubmit(e) {
     try {
         e.preventDefault();
 
+        e.target.elements.searchQuery.value = e.target.elements.searchQuery.value.trim();
         fetchOptions.searchTxt = e.target.elements.searchQuery.value;
         if (!fetchOptions.searchTxt) {
             Notify.failure('Sorry, there are EMPTY your search query. Please try again.', notifyOptions);
