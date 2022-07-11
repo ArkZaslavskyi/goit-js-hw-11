@@ -34,7 +34,7 @@ const observer = new IntersectionObserver(entries => {
         if (entry.isIntersecting) {
             // console.log('!!! INTERSECTING !!!');
             
-            if (fetchOptions.pgCurrent * fetchOptions.cardsPerPg >= totalCards) {
+            if (isLastPage(fetchOptions)) {
                 Notify.warning("We're sorry, but you've reached the END of search results.", notifyOptions);
                 return;
             }
@@ -44,25 +44,29 @@ const observer = new IntersectionObserver(entries => {
     });
 }, observerOptions);
 
+function isLastPage({ pgCurrent, cardsPerPg }) {
+    return pgCurrent * cardsPerPg >= totalCards; 
+}
 refs.form.addEventListener('submit', onFormSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMoreImages);
 
 async function onFormSubmit(e) {
     try {
         e.preventDefault();
-
-        e.target.elements.searchQuery.value = e.target.elements.searchQuery.value.trim();
-        fetchOptions.searchTxt = e.target.elements.searchQuery.value;
+        
+        refs.searchImgTxt.value = refs.searchImgTxt.value.trim();
+        fetchOptions.searchTxt = refs.searchImgTxt.value;
+        
         if (!fetchOptions.searchTxt) {
-            Notify.failure('Sorry, there are EMPTY your search query. Please try again.', notifyOptions);
+            Notify.failure('Sorry, your search query is EMPTY . Please, enter your query.', notifyOptions);
             return;
         }
 
         // очистка начальных значений
         resetStartedValues();
 
-        const fetchData = await fetchImages(fetchOptions);
-        await drawGallery(fetchData.data);
+        const fetchResponse = await fetchImages(fetchOptions);
+        await drawGallery(fetchResponse);
         
         await setTimeout(setObserveOn, 500);
     } catch (err) {
@@ -83,9 +87,10 @@ async function onLoadMoreImages() {
     try {
         fetchOptions.pgCurrent += 1;
 
-        const fetchData = await fetchImages(fetchOptions);
-        await drawGallery(fetchData.data);
+        const fetchResponse = await fetchImages(fetchOptions);
+        await drawGallery(fetchResponse);
     } catch (err) {
+        console.log('onLoadMoreImages - catch');
         Notify.failure(err, notifyOptions);
     };
 }
@@ -100,7 +105,7 @@ function setObserveOff() {
     // document.querySelector('#scroll-check').classList.remove('scroll-check');
 };
 
-function drawGallery(data) {
+function drawGallery({data}) {
     const cards = data.hits;
     totalCards = data.totalHits;
 
